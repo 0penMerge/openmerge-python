@@ -12,9 +12,16 @@ def test_catalog_and_workspace_headers() -> None:
         if request.url.path == "/integrations":
             return httpx.Response(
                 200,
-                json=[{"provider": "hubspot", "descriptor": {"id": "hubspot", "name": "HubSpot"}}],
+                json={
+                    "integrations": [
+                        {
+                            "provider": "hubspot",
+                            "descriptor": {"id": "hubspot", "name": "HubSpot"},
+                        }
+                    ]
+                },
             )
-        return httpx.Response(200, json=[])
+        return httpx.Response(200, json={"models": []})
 
     client = OpenMerge(
         api_key="om_test_secret",

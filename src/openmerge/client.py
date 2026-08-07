@@ -173,16 +173,12 @@ class OpenMerge:
         }
 
     def list_integrations(self, workspace_id: str) -> List[ConnectorIntegration]:
-        return cast(
-            List[ConnectorIntegration],
-            self._request("GET", "/integrations", query={"wsid": workspace_id}),
-        )
+        value = self._request("GET", "/integrations", query={"wsid": workspace_id})
+        return cast(List[ConnectorIntegration], value["integrations"])
 
     def list_models(self, workspace_id: Optional[str] = None) -> List[UnifiedModelDefinition]:
-        return cast(
-            List[UnifiedModelDefinition],
-            self._request("GET", "/models", query={"wsid": workspace_id}),
-        )
+        value = self._request("GET", "/models", query={"wsid": workspace_id})
+        return cast(List[UnifiedModelDefinition], value["models"])
 
     def list_linked_accounts(self, workspace_id: str) -> List[LinkedAccount]:
         value = self._request("GET", "/linked-accounts", query={"wsid": workspace_id})
