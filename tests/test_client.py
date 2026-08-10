@@ -83,3 +83,56 @@ def test_conflict_is_typed() -> None:
             changes={"email": "new@example.com"},
             idempotency_key="customer-event-123",
         )
+
+
+def test_developer_ir_and_connection_mapping_contracts() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if request.url.path.endswith("/field-mapping-token"):
+            return httpx.Response(
+                200,
+                json={"token": "t" * 32, "expires_in": 1800, "hosted_url": "https://connect.openmerge.dev/x"},
+            )
+        if request.url.path.startswith("/developer-ir/"):
+            return httpx.Response(
+                200,
+                json={
+                    "wsid": "ws_1",
+                    "oauth_app_id": "oa_1",
+                    "model_id": "Contact",
+                    "generation": 1,
+                    "document_hash": "sha256:test",
+                    "requirements": {},
+                    "document": {},
+                    "removed_fields": [],
+                },
+            )
+        return httpx.Response(200, json={"id": "map_1", "action": "activate", "state": "queued"})
+
+    client = OpenMerge(
+        api_key="om_test_secret",
+        base_url="http://localhost:8000",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    developer = client.update_developer_ir(
+        "ws_1",
+        "oa_1",
+        "Contact",
+        expected_generation=0,
+        fields={"customer_tier": {"type": "string", "required": True}},
+    )
+    assert developer["generation"] == 1
+    token = client.create_connection_mapping_token(
+        "la_1", host_origin="https://customer.example"
+    )
+    assert token["expiresIn"] == 1800
+    job = client.activate_connection_mapping(
+        "la_1",
+        expected_developer_generations={"Contact": 1},
+        mappings={"Contact": {"customer_tier": "Customer_Tier__c"}},
+        idempotency_key="mapping-1",
+    )
+    assert job["state"] == "queued"
+    assert requests[0].url.params["wsid"] == "ws_1"

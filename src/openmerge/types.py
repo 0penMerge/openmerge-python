@@ -21,6 +21,39 @@ class LinkedAccount(TypedDict, total=False):
     sync_count: int
     sync_cadence_seconds: int
     created_at: float
+    mapping_status: str
+    mapping_required: bool
+
+
+class DeveloperIR(TypedDict, total=False):
+    wsid: str
+    oauth_app_id: str
+    provider: Optional[str]
+    model_id: str
+    generation: int
+    document_hash: str
+    inherited: bool
+    document: Dict[str, Any]
+    requirements: Dict[str, Dict[str, Any]]
+    removed_fields: List[str]
+
+
+class ConnectionMappingSchema(TypedDict, total=False):
+    linked_account: Dict[str, Any]
+    oauth_app: Dict[str, Any]
+    status: str
+    required: bool
+    models: List[Dict[str, Any]]
+
+
+class ConnectionMappingJob(TypedDict, total=False):
+    id: str
+    action: str
+    state: str
+    linked_account_id: str
+    models: Any
+    result: Dict[str, Any]
+    error: str
 
 
 class ConnectorDescriptor(TypedDict, total=False):

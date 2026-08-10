@@ -5,7 +5,7 @@ Typed, server-side Python client for OpenMerge's unified integration API.
 ## Setup
 
 ```bash
-python -m pip install "openmerge @ git+https://github.com/0penMerge/openmerge-python@v0.1.0"
+python -m pip install "openmerge @ git+https://github.com/0penMerge/openmerge-python@v0.2.0"
 ```
 
 ```python

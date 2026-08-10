@@ -20,6 +20,9 @@ from .errors import (
 )
 from .types import (
     ConnectorIntegration,
+    ConnectionMappingJob,
+    ConnectionMappingSchema,
+    DeveloperIR,
     LinkedAccount,
     LinkToken,
     UnifiedModelDefinition,
@@ -86,7 +89,7 @@ class OpenMerge:
             "Accept": "application/json",
             "Authorization": f"Bearer {self._api_key}",
             "X-Request-ID": request_id,
-            "X-OpenMerge-SDK": "python/0.1.0",
+            "X-OpenMerge-SDK": "python/0.2.0",
         }
         if idempotency_key:
             headers["Idempotency-Key"] = idempotency_key
@@ -193,6 +196,84 @@ class OpenMerge:
             body={"models": models},
         )
         return cast(List[Dict[str, Any]], value["runs"])
+
+    def get_developer_ir(
+        self, workspace_id: str, oauth_app_id: str, model_id: str
+    ) -> DeveloperIR:
+        value = self._request(
+            "GET",
+            f"/developer-ir/{quote(oauth_app_id, safe='')}/{quote(model_id, safe='')}",
+            query={"wsid": workspace_id},
+        )
+        return cast(DeveloperIR, value)
+
+    def update_developer_ir(
+        self,
+        workspace_id: str,
+        oauth_app_id: str,
+        model_id: str,
+        *,
+        expected_generation: int,
+        fields: Mapping[str, Mapping[str, Any]],
+        removed_fields: Sequence[str] = (),
+    ) -> DeveloperIR:
+        value = self._request(
+            "PUT",
+            f"/developer-ir/{quote(oauth_app_id, safe='')}/{quote(model_id, safe='')}",
+            query={"wsid": workspace_id},
+            body={
+                "expected_generation": expected_generation,
+                "fields": {name: dict(field) for name, field in fields.items()},
+                "removed_fields": list(removed_fields),
+            },
+        )
+        return cast(DeveloperIR, value)
+
+    def get_connection_mapping(self, linked_account_id: str) -> ConnectionMappingSchema:
+        value = self._request(
+            "GET",
+            f"/linked-accounts/{quote(linked_account_id, safe='')}/field-mapping",
+        )
+        return cast(ConnectionMappingSchema, value)
+
+    def create_connection_mapping_token(
+        self, linked_account_id: str, *, host_origin: Optional[str] = None
+    ) -> LinkToken:
+        value = self._request(
+            "POST",
+            f"/linked-accounts/{quote(linked_account_id, safe='')}/field-mapping-token",
+            body={"host_origin": host_origin},
+        )
+        return {
+            "token": value["token"],
+            "expiresIn": value["expires_in"],
+            "hostedUrl": value["hosted_url"],
+        }
+
+    def activate_connection_mapping(
+        self,
+        linked_account_id: str,
+        *,
+        expected_developer_generations: Mapping[str, int],
+        mappings: Mapping[str, Mapping[str, str]],
+        idempotency_key: Optional[str] = None,
+    ) -> ConnectionMappingJob:
+        value = self._request(
+            "POST",
+            f"/linked-accounts/{quote(linked_account_id, safe='')}/field-mapping",
+            body={
+                "expected_developer_generations": dict(expected_developer_generations),
+                "mappings": {model: dict(fields) for model, fields in mappings.items()},
+                "idempotency_key": idempotency_key,
+            },
+        )
+        return cast(ConnectionMappingJob, value)
+
+    def get_connection_mapping_job(self, job_id: str) -> ConnectionMappingJob:
+        value = self._request(
+            "GET", f"/connection-mapping-jobs/{quote(job_id, safe='')}"
+        )
+        return cast(ConnectionMappingJob, value)
 
     def list_records(
         self,
