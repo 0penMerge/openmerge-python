@@ -17,6 +17,18 @@ with OpenMerge(api_key=os.environ["OPENMERGE_API_KEY"]) as client:
     accounts = client.list_linked_accounts("ws_123")
 ```
 
+Per-connection application-to-CRM defaults are passed server-side when the link
+token is minted. Developer IR policy determines whether the customer can change
+the selection in the widget:
+
+```python
+link = client.create_link_token(
+    "ws_123",
+    "customer_456",
+    mapping_overrides={"salesforce": {"Contact": {"research_bio": "Research_Bio__c"}}},
+)
+```
+
 API keys stay on the server. Browser applications should receive only short-lived link tokens. Writes require an application-owned idempotency key. Webhooks must be verified against the exact raw body before JSON parsing:
 
 ```python

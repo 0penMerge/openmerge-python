@@ -19,9 +19,9 @@ from .errors import (
     ValidationError,
 )
 from .types import (
-    ConnectorIntegration,
     ConnectionMappingJob,
     ConnectionMappingSchema,
+    ConnectorIntegration,
     DeveloperIR,
     LinkedAccount,
     LinkToken,
@@ -158,6 +158,7 @@ class OpenMerge:
         *,
         allowed_categories: Optional[Sequence[str]] = None,
         host_origin: Optional[str] = None,
+        mapping_overrides: Optional[Dict[str, Dict[str, Dict[str, str]]]] = None,
     ) -> LinkToken:
         value = self._request(
             "POST",
@@ -167,6 +168,7 @@ class OpenMerge:
                 "end_user_origin_id": end_user_origin_id,
                 "allowed_categories": allowed_categories,
                 "host_origin": host_origin,
+                "mapping_overrides": mapping_overrides,
             },
         )
         return {
@@ -197,9 +199,7 @@ class OpenMerge:
         )
         return cast(List[Dict[str, Any]], value["runs"])
 
-    def get_developer_ir(
-        self, workspace_id: str, oauth_app_id: str, model_id: str
-    ) -> DeveloperIR:
+    def get_developer_ir(self, workspace_id: str, oauth_app_id: str, model_id: str) -> DeveloperIR:
         value = self._request(
             "GET",
             f"/developer-ir/{quote(oauth_app_id, safe='')}/{quote(model_id, safe='')}",
@@ -270,9 +270,7 @@ class OpenMerge:
         return cast(ConnectionMappingJob, value)
 
     def get_connection_mapping_job(self, job_id: str) -> ConnectionMappingJob:
-        value = self._request(
-            "GET", f"/connection-mapping-jobs/{quote(job_id, safe='')}"
-        )
+        value = self._request("GET", f"/connection-mapping-jobs/{quote(job_id, safe='')}")
         return cast(ConnectionMappingJob, value)
 
     def list_records(

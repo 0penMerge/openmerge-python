@@ -1,3 +1,5 @@
+import json
+
 import httpx
 import pytest
 
@@ -85,6 +87,35 @@ def test_conflict_is_typed() -> None:
         )
 
 
+def test_link_token_carries_application_mapping_overrides() -> None:
+    captured: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.update(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json={
+                "token": "t" * 32,
+                "expires_in": 1800,
+                "hosted_url": "https://connect.openmerge.dev/x",
+            },
+        )
+
+    client = OpenMerge(
+        api_key="om_test_secret",
+        base_url="http://localhost:8000",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    client.create_link_token(
+        "ws_1",
+        "customer_1",
+        mapping_overrides={"salesforce": {"Contact": {"research_bio": "Research_Bio__c"}}},
+    )
+    assert captured["mapping_overrides"] == {
+        "salesforce": {"Contact": {"research_bio": "Research_Bio__c"}}
+    }
+
+
 def test_developer_ir_and_connection_mapping_contracts() -> None:
     requests: list[httpx.Request] = []
 
@@ -93,7 +124,11 @@ def test_developer_ir_and_connection_mapping_contracts() -> None:
         if request.url.path.endswith("/field-mapping-token"):
             return httpx.Response(
                 200,
-                json={"token": "t" * 32, "expires_in": 1800, "hosted_url": "https://connect.openmerge.dev/x"},
+                json={
+                    "token": "t" * 32,
+                    "expires_in": 1800,
+                    "hosted_url": "https://connect.openmerge.dev/x",
+                },
             )
         if request.url.path.startswith("/developer-ir/"):
             return httpx.Response(
@@ -124,9 +159,7 @@ def test_developer_ir_and_connection_mapping_contracts() -> None:
         fields={"customer_tier": {"type": "string", "required": True}},
     )
     assert developer["generation"] == 1
-    token = client.create_connection_mapping_token(
-        "la_1", host_origin="https://customer.example"
-    )
+    token = client.create_connection_mapping_token("la_1", host_origin="https://customer.example")
     assert token["expiresIn"] == 1800
     job = client.activate_connection_mapping(
         "la_1",

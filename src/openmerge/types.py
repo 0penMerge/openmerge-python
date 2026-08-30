@@ -32,6 +32,7 @@ class DeveloperIR(TypedDict, total=False):
     model_id: str
     generation: int
     document_hash: str
+    contract_hash: str
     inherited: bool
     document: Dict[str, Any]
     requirements: Dict[str, Dict[str, Any]]
