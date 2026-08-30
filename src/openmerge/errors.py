@@ -11,6 +11,12 @@ class ConfigurationError(OpenMergeError):
     pass
 
 
+class RequestTimeoutError(OpenMergeError, TimeoutError):
+    def __init__(self, message: str, *, timeout_seconds: float) -> None:
+        super().__init__(message)
+        self.timeout_seconds = timeout_seconds
+
+
 class APIError(OpenMergeError):
     def __init__(
         self,
