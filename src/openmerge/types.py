@@ -386,6 +386,7 @@ class ConnectionMappingOAuthApp(TypedDict):
 
 
 ConnectionMappingBindingSource = Literal["application", "connection", "default", "unmapped"]
+ConnectionMappingRequirementSource = Literal["developer_ir", "connector_default"]
 
 
 class ConnectionMappingField(TypedDict, total=False):
@@ -400,6 +401,8 @@ class ConnectionMappingField(TypedDict, total=False):
     sensitivity: DeveloperFieldSensitivity
     description: str
     required: bool
+    requirement_source: ConnectionMappingRequirementSource
+    provider_create_required: bool
     direction: DeveloperFieldDirection
     default_provider_field: Optional[str]
     override_by: List[DeveloperFieldOverrideActor]
@@ -462,12 +465,28 @@ class ConnectionMappingProviderField(TypedDict, total=False):
     mass_update: bool
 
 
+class ConnectionMappingProviderCreateRequirement(TypedDict):
+    path: str
+    label: str
+    type: str
+    mapped_by: List[str]
+    satisfied: bool
+
+
+class ConnectionMappingWriteReadiness(TypedDict):
+    create: bool
+    upsert: bool
+    missing_create_fields: List[str]
+
+
 class ConnectionMappingModel(TypedDict):
     id: str
     developer_ir_generation: int
     developer_ir_hash: str
     fields: List[ConnectionMappingField]
     provider_fields: List[ConnectionMappingProviderField]
+    provider_create_requirements: List[ConnectionMappingProviderCreateRequirement]
+    write_readiness: ConnectionMappingWriteReadiness
     schema_observed_at: Optional[str]
     schema_ready: bool
 
