@@ -13,6 +13,7 @@ from openmerge import (
     OpenMerge,
     OpenMergeError,
     RecordWebhookEnvelope,
+    LinkedAccountReauthRequiredWebhookEnvelope,
     RecordWebhookEvent,
     RequestTimeoutError,
     WebhookEnvelope,
@@ -553,6 +554,7 @@ def test_webhook_envelope_union_tracks_record_and_domain_wire_families() -> None
     assert set(get_args(WebhookEnvelope)) == {
         RecordWebhookEnvelope,
         DomainWebhookEnvelope,
+        LinkedAccountReauthRequiredWebhookEnvelope,
     }
     assert set(get_args(RecordWebhookEvent)).isdisjoint(get_args(DomainWebhookEvent))
 

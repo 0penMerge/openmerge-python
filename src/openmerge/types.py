@@ -31,6 +31,7 @@ RecordWebhookEvent = Literal["record.created", "record.updated", "record.deleted
 DomainWebhookEvent = Literal[
     "linked_account.created",
     "linked_account.reconnected",
+    "linked_account.reauth_required",
     "sync.running",
     "sync.completed",
     "sync.failed",
@@ -114,6 +115,8 @@ class LinkedAccount(TypedDict, total=False):
     end_user_origin_id: str
     end_user_label: str
     status: str
+    reauth_reason: Optional[str]
+    needs_reauth_at: Optional[float]
     last_sync_at: Optional[float]
     sync_count: int
     sync_cadence_seconds: int
@@ -279,8 +282,12 @@ class WebhookOAuthAppContext(_WebhookOAuthAppContextRequired, total=False):
     name: Optional[str]
 
 
-class WebhookConnectionContext(TypedDict):
+class _WebhookConnectionContextRequired(TypedDict):
     id: Optional[str]
+
+
+class WebhookConnectionContext(_WebhookConnectionContextRequired, total=False):
+    status: Optional[str]
 
 
 class WebhookContext(TypedDict):
@@ -366,12 +373,39 @@ class DomainWebhookEnvelope(TypedDict):
     breadcrumbs: DomainWebhookBreadcrumbs
 
 
+class LinkedAccountReauthRequiredData(TypedDict):
+    linked_account_id: str
+    provider: str
+    end_user_origin_id: str
+    status: Literal["needs_reauth"]
+    reason: str
+    recoverable: Literal[True]
+    action: Literal["reconnect"]
+
+
+class LinkedAccountReauthRequiredBreadcrumbs(DomainWebhookBreadcrumbs):
+    transition_id: str
+    previous_status: str
+    credential_version: int
+
+
+class LinkedAccountReauthRequiredWebhookEnvelope(TypedDict):
+    event: Literal["linked_account.reauth_required"]
+    ctx: WebhookContext
+    data: LinkedAccountReauthRequiredData
+    breadcrumbs: LinkedAccountReauthRequiredBreadcrumbs
+
+
 # Compatibility aliases retained for applications already importing the
 # original record-envelope component names.
 WebhookData = RecordWebhookData
 WebhookPlan = RecordWebhookPlan
 WebhookBreadcrumbs = RecordWebhookBreadcrumbs
-WebhookEnvelope = Union[RecordWebhookEnvelope, DomainWebhookEnvelope]
+WebhookEnvelope = Union[
+    RecordWebhookEnvelope,
+    DomainWebhookEnvelope,
+    LinkedAccountReauthRequiredWebhookEnvelope,
+]
 
 
 class ConnectionMappingLinkedAccount(TypedDict):
