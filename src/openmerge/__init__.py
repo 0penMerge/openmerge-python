@@ -1,4 +1,4 @@
-from .client import OpenMerge, hosted_widget_url
+from .client import AsyncOpenMerge, OpenMerge, hosted_widget_url
 from .errors import (
     APIError,
     AuthenticationError,
@@ -94,6 +94,7 @@ from .types import (
 from .webhooks import VerifiedWebhook, verify_webhook_signature
 
 __all__ = [
+    "AsyncOpenMerge",
     "APIError",
     "AuthenticationError",
     "ConfigurationError",

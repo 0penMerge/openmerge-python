@@ -5,10 +5,11 @@ Typed, server-side Python client for OpenMerge's unified integration API.
 ## Setup
 
 ```bash
-python -m pip install "openmerge @ git+https://github.com/0penMerge/openmerge-python.git@main"
+python -m pip install openmerge
 ```
 
 ```python
+import os
 from openmerge import OpenMerge
 
 with OpenMerge(api_key=os.environ["OPENMERGE_API_KEY"]) as client:
@@ -16,6 +17,24 @@ with OpenMerge(api_key=os.environ["OPENMERGE_API_KEY"]) as client:
     models = client.list_models("ws_123")
     accounts = client.list_linked_accounts("ws_123")
 ```
+
+For FastAPI and other async applications, reuse one `AsyncOpenMerge` instance
+per application lifespan. It uses a pooled `httpx.AsyncClient`:
+
+```python
+from openmerge import AsyncOpenMerge
+
+async def list_accounts():
+    async with AsyncOpenMerge(api_key=os.environ["OPENMERGE_API_KEY"]) as client:
+        return await client.list_linked_accounts("ws_123")
+```
+
+All network methods have async equivalents, including mapping, reconnect,
+sync and bulk writeback. Use `async for` with `iterate_records`. An injected
+HTTP client remains caller-owned; otherwise `aclose()` releases the pool.
+
+Releases are published by `.github/workflows/ci.yml` on version tags such as
+`v0.3.0`, after CI passes, using PyPI Trusted Publishing and the `pypi` environment.
 
 Per-connection application-to-CRM defaults are passed server-side when the link
 token is minted. Developer IR policy determines whether the customer can change

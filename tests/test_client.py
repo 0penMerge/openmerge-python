@@ -1,3 +1,5 @@
+import asyncio
+import inspect
 import json
 from typing import get_args
 from unittest.mock import patch
@@ -6,14 +8,15 @@ import httpx
 import pytest
 
 from openmerge import (
+    AsyncOpenMerge,
     ConfigurationError,
     ConflictError,
     DomainWebhookEnvelope,
     DomainWebhookEvent,
+    LinkedAccountReauthRequiredWebhookEnvelope,
     OpenMerge,
     OpenMergeError,
     RecordWebhookEnvelope,
-    LinkedAccountReauthRequiredWebhookEnvelope,
     RecordWebhookEvent,
     RequestTimeoutError,
     WebhookEnvelope,
@@ -21,6 +24,87 @@ from openmerge import (
     __version__,
     hosted_widget_url,
 )
+
+
+def test_async_client_pool_and_endpoint_parity():
+    for name, _method in inspect.getmembers(OpenMerge, inspect.isfunction):
+        if name.startswith("_") or name in {"close", "hosted_widget_url"}:
+            continue
+        counterpart = getattr(AsyncOpenMerge, name)
+        assert inspect.iscoroutinefunction(counterpart) or inspect.isasyncgenfunction(
+            counterpart
+        ), name
+
+    async def scenario():
+        calls = []
+
+        async def handler(request):
+            calls.append(request)
+            await asyncio.sleep(0)
+            return httpx.Response(200, json={"integrations": []})
+
+        transport_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        async with AsyncOpenMerge(api_key="om_test_key", client=transport_client) as sdk:
+            await asyncio.gather(*(sdk.list_integrations("ws1") for _ in range(20)))
+        assert len(calls) == 20
+        assert not transport_client.is_closed  # caller owns injected clients
+        await transport_client.aclose()
+
+    asyncio.run(scenario())
+
+
+def test_async_bulk_preserves_command_overrides():
+    async def scenario():
+        async def handler(request):
+            payload = json.loads(request.content)
+            assert payload["items"][0]["field_overrides"] == {
+                "research": {"provider_field": "Bio__c", "type": "string"}
+            }
+            return httpx.Response(202, json={"write": {"id": "write1", "state": "pending"}})
+
+        client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        async with client, AsyncOpenMerge(api_key="om_test_key", client=client) as sdk:
+            result = await sdk.bulk_records(
+                "Contact",
+                workspace_id="ws1",
+                linked_account_id="connection1",
+                items=[
+                    {
+                        "operation": "create",
+                        "changes": {"research": "hi"},
+                        "field_overrides": {
+                            "research": {"provider_field": "Bio__c", "type": "string"}
+                        },
+                    }
+                ],
+                idempotency_key="command-key-123",
+            )
+            assert result["id"] == "write1"
+
+    asyncio.run(scenario())
+
+
+def test_async_cancellation_stops_request_without_retry():
+    async def scenario():
+        entered = asyncio.Event()
+        count = 0
+
+        async def handler(request):
+            nonlocal count
+            count += 1
+            entered.set()
+            await asyncio.Event().wait()
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            sdk = AsyncOpenMerge(api_key="om_test_key", client=client)
+            task = asyncio.create_task(sdk.list_integrations("ws1"))
+            await entered.wait()
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+            assert count == 1
+
+    asyncio.run(scenario())
 
 
 def test_catalog_and_workspace_headers() -> None:

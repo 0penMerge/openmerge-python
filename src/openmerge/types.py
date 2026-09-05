@@ -638,6 +638,8 @@ class _BulkRecordActionItemRequired(TypedDict):
 
 
 class BulkRecordActionItem(_BulkRecordActionItemRequired, total=False):
+    field_overrides: Dict[str, Dict[str, str]]
+    expected_plan_hash: str
     unified_id: str
     remote_id: str
     changes: Dict[str, Any]
